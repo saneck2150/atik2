@@ -4,3 +4,8 @@ services:
       context: ./services/word_counter
     ports:
       - "8001:8001"
+  thumbnail_generator:
+    build:
+      context: ./services/thumbnail_generator
+    ports:
+      - "8004:8004"

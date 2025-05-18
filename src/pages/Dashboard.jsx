@@ -1,6 +1,7 @@
 import React, { useEffect, useState, useRef } from "react";
 import api from "../api";
 import styles from "./Dashboard.module.css";
+import { fetchThumbnail } from "../api";
 
 export default function Dashboard() {
   const [user, setUser] = useState(null);
@@ -14,6 +15,7 @@ export default function Dashboard() {
   const [query, setQuery] = useState("");
   const [extensions, setExtensions] = useState([]);
   const [selectedExt, setSelectedExt] = useState(null);
+  const [thumbnails, setThumbnails] = useState({});
 
   useEffect(() => {
     api.get("me/").then(res => setUser(res.data)).catch(console.error);
@@ -40,6 +42,25 @@ export default function Dashboard() {
       .then(res => setFiles(res.data))
       .catch(console.error);
   };
+
+  useEffect(() => {
+  files.forEach((file) => {
+    if (
+      file.content_type?.startsWith("image/") &&
+      !thumbnails[file.id]
+    ) {
+      api.get(`file/${file.id}/download/`, { responseType: "blob" })
+        .then((res) => fetchThumbnail(res.data))
+        .then((blob) => {
+          const url = URL.createObjectURL(blob);
+          setThumbnails((prev) => ({ ...prev, [file.id]: url }));
+        })
+        .catch((err) => {
+          console.error("Thumbnail error:", err);
+        });
+    }
+  });
+}, [files, thumbnails]);
 
   useEffect(() => {
     const id = setTimeout(() => fetchFiles(query), 300);
@@ -298,20 +319,34 @@ const countWords = async (file) => {
                 return f.filename.toLowerCase().endsWith(`.${selectedExt}`);
               }).map(f => (
                 <div
-                  key={f.id}
-                  className={styles["file-card"]}
-                  onClick={() => handlePreview(f.id)}
-                >
-                  <strong>{f.filename}</strong>
-                  <div className={styles["file-type"]}>{f.content_type}</div>
-                  <div className={styles["file-date"]}>
-                    {new Date(f.uploaded_at).toLocaleString()}
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-        </section>
+        key={f.id}
+        className={styles["file-card"]}
+        onClick={() => handlePreview(f.id)}
+      >
+        {/* 👇 превью, если есть */}
+        {thumbnails[f.id] && (
+          <img
+            src={thumbnails[f.id]}
+            alt="preview"
+            style={{
+              width: 80,
+              height: 80,
+              objectFit: "cover",
+              borderRadius: 8,
+              marginBottom: 8,
+            }}
+          />
+        )}
+        <strong>{f.filename}</strong>
+        <div className={styles["file-type"]}>{f.content_type}</div>
+        <div className={styles["file-date"]}>
+        {new Date(f.uploaded_at).toLocaleString()}
+        </div>
+      </div>
+    ))}
+  </div>
+)}
+</section>
 
         {preview && (
           <section className={styles["preview-section"]}>
