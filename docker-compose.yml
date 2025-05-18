@@ -1,0 +1,6 @@
+services:
+  word_counter:
+    build:
+      context: ./services/word_counter
+    ports:
+      - "8001:8001"
